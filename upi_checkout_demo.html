@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Real UPI Intent Checkout</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #f3f5f9;
+            font-family: Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #111827
+        }
+
+        .card {
+            width: 100%;
+            max-width: 430px;
+            background: #fff;
+            border-radius: 22px;
+            padding: 28px;
+            box-shadow: 0 18px 50px #00000012
+        }
+
+        .logo {
+            width: 46px;
+            height: 46px;
+            border-radius: 13px;
+            background: #111827;
+            color: #fff;
+            display: grid;
+            place-items: center;
+            font-weight: 800;
+            font-size: 22px
+        }
+
+        .brand {
+            display: flex;
+            gap: 12px;
+            align-items: center
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 22px
+        }
+
+        .muted {
+            color: #6b7280;
+            font-size: 13px
+        }
+
+        .amount {
+            font-size: 42px;
+            font-weight: 800;
+            margin: 24px 0 5px
+        }
+
+        .box {
+            background: #f8fafc;
+            padding: 13px;
+            border-radius: 12px;
+            margin: 18px 0;
+            font-size: 13px
+        }
+
+        button {
+            width: 100%;
+            border: 0;
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 9px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer
+        }
+
+        .primary {
+            background: #111827;
+            color: #fff
+        }
+
+        .secondary {
+            background: #eef2f7;
+            color: #111827
+        }
+
+        .status {
+            margin-top: 18px;
+            padding: 14px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 700;
+            background: #fffbeb;
+            color: #a16207
+        }
+
+        .success {
+            background: #ecfdf5;
+            color: #047857
+        }
+
+        .error {
+            background: #fff1f2;
+            color: #be123c
+        }
+
+        .qr {
+            border-top: 1px solid #e5e7eb;
+            margin-top: 20px;
+            padding-top: 20px;
+            text-align: center
+        }
+
+        .hidden {
+            display: none
+        }
+
+        #qrcode {
+            display: flex;
+            justify-content: center;
+            margin: 16px
+        }
+
+        input {
+            width: 100%;
+            padding: 13px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 15px;
+            margin-top: 8px
+        }
+
+        .small {
+            font-size: 12px;
+            color: #6b7280;
+            line-height: 1.5
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="brand">
+            <div class="logo">₹</div>
+            <div>
+                <h1>UPI Checkout</h1>
+                <div class="muted">Real UPI Intent demo</div>
+            </div>
+        </div>
+
+        <div class="amount">₹2.00</div>
+        <div class="muted">Order: <span id="order"></span></div>
+
+        <div class="box">
+            <b>Pay to</b><br>
+            9392164156@ybl
+        </div>
+
+        <button class="primary" id="pay">Pay ₹2 with UPI</button>
+        <button class="secondary" id="qrBtn">Show QR Code</button>
+
+        <div id="status" class="status">Ready for payment</div>
+
+        <div id="qrBox" class="qr hidden">
+            <b>Scan with your UPI app</b>
+            <div id="qrcode"></div>
+            <div class="small">This QR contains the same UPI payment request used by the Intent button.</div>
+        </div>
+
+        <div id="utrBox" class="qr hidden">
+            <b>Payment could not be confirmed automatically</b>
+            <p class="small">If you completed the payment, enter the UTR/transaction ID. This page sends it to your
+                backend for verification.</p>
+            <input id="utr" placeholder="Enter UTR / transaction ID">
+            <button class="primary" id="verify">Verify Payment</button>
+        </div>
+    </div>
+
+    <script>
+        const VPA = "9505404767@ybl";
+        const AMOUNT = "2.00";
+        const ORDER = "ORD_" + Date.now();
+
+        document.getElementById("order").textContent = ORDER;
+
+        function upiUrl() {
+            const p = new URLSearchParams({
+                pa: VPA,
+                pn: "Payment Demo",
+                am: AMOUNT,
+                cu: "INR",
+                tr: ORDER,
+                tn: "Order " + ORDER
+            });
+            return "upi://pay?" + p.toString();
+        }
+
+        function setStatus(text, type = "") {
+            const s = document.getElementById("status");
+            s.textContent = text;
+            s.className = "status " + type;
+        }
+
+        document.getElementById("pay").onclick = () => {
+            setStatus("Opening your UPI app...");
+            sessionStorage.setItem("upiStarted", "1");
+            sessionStorage.setItem("upiStartedAt", Date.now());
+
+            /*
+              REAL ACTION:
+              This launches the installed UPI application on supported
+              Android/browser combinations. No simulated payment occurs.
+            */
+            window.location.href = upiUrl();
+        };
+
+        document.getElementById("qrBtn").onclick = () => {
+            const box = document.getElementById("qrBox");
+            box.classList.remove("hidden");
+            document.getElementById("qrcode").innerHTML = "";
+            new QRCode(document.getElementById("qrcode"), {
+                text: upiUrl(), width: 220, height: 220
+            });
+        };
+
+        document.getElementById("verify").onclick = async () => {
+            const utr = document.getElementById("utr").value.trim();
+            if (!utr) { alert("Enter the UTR."); return }
+
+            setStatus("Verifying payment...");
+
+            /*
+              REAL PRODUCTION REQUEST:
+          
+              const response = await fetch("/api/verify-payment", {
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({
+                  orderId: ORDER,
+                  amount: 2.00,
+                  utr: utr
+                })
+              });
+          
+              const result = await response.json();
+          
+              if(result.status === "SUCCESS")
+                 setStatus("✓ Payment successful","success");
+              else
+                 setStatus("Payment not verified","error");
+          
+              The backend must verify the UTR against an authoritative
+              bank/acquirer/payment-data source. A browser alone cannot do this.
+            */
+
+            setStatus("Verification endpoint is not configured yet.", "error");
+        };
+
+        let hiddenAt = null;
+
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                hiddenAt = Date.now();
+                return;
+            }
+
+            if (sessionStorage.getItem("upiStarted")) {
+                const elapsed = Date.now() - (hiddenAt || Date.now());
+
+                /*
+                  When the user returns from the UPI app, we DO NOT claim payment
+                  success. We give the backend a chance to verify it.
+                */
+                setStatus("Returned from UPI. Checking payment...");
+
+                /*
+                  Replace this with:
+                  GET /api/payments/ORD_xxx/status
+            
+                  The backend should return SUCCESS / PENDING / FAILED.
+                */
+                setTimeout(() => {
+                    document.getElementById("utrBox").classList.remove("hidden");
+                    setStatus("Payment needs verification.");
+                }, 2000);
+            }
+        });
+    </script>
+</body>
+
+</html>
